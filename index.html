@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
->
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1,
+               maximum-scale=1,
+               user-scalable=no">
 
-<title>🎮 PS5 Türkçe Çeviri V7</title>
+<title>PS5 Türkçe Çeviri V8</title>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
@@ -27,13 +28,13 @@ body{
 }
 
 h1{
-  margin:8px 0 10px;
-  font-size:31px;
+  font-size:30px;
+  margin:8px 0;
 }
 
 .subtitle{
   color:#aaa;
-  font-size:19px;
+  font-size:18px;
   line-height:1.4;
   margin-bottom:22px;
 }
@@ -56,14 +57,36 @@ video{
 
 .scan-box{
   position:absolute;
-  left:5%;
-  right:5%;
-  bottom:5%;
-  height:28%;
+
+  left:7%;
+  right:7%;
+
+  top:58%;
+  height:35%;
+
   border:3px solid white;
   border-radius:22px;
-  box-shadow:0 0 25px rgba(255,255,255,.65);
+
+  box-shadow:
+    0 0 18px rgba(255,255,255,.65);
+
   pointer-events:none;
+}
+
+.scan-label{
+  position:absolute;
+  top:3%;
+  left:50%;
+  transform:translateX(-50%);
+
+  background:rgba(0,0,0,.65);
+
+  padding:5px 12px;
+
+  border-radius:12px;
+
+  font-size:12px;
+  color:#fff;
 }
 
 .controls{
@@ -77,8 +100,9 @@ button{
   border:0;
   border-radius:24px;
   padding:18px 10px;
-  font-size:19px;
+  font-size:18px;
   font-weight:700;
+
   background:#292d35;
   color:#fff;
 }
@@ -89,14 +113,14 @@ button.primary{
 }
 
 button:disabled{
-  opacity:.45;
+  opacity:.4;
 }
 
 .result{
   margin-top:28px;
   padding:25px;
-  background:#1b1e23;
   border-radius:28px;
+  background:#1b1e23;
 }
 
 .label{
@@ -107,7 +131,7 @@ button:disabled{
 
 .text{
   font-size:25px;
-  line-height:1.35;
+  line-height:1.4;
   min-height:38px;
   margin-bottom:25px;
 }
@@ -119,22 +143,22 @@ button:disabled{
 }
 
 .confidence{
-  color:#888;
   margin-top:9px;
+  color:#888;
 }
 
 .debug{
+  margin-top:10px;
   color:#666;
   font-size:13px;
   line-height:1.4;
-  margin-top:10px;
   word-break:break-word;
 }
 
 .version{
+  margin-top:15px;
   color:#666;
   font-size:14px;
-  margin-top:15px;
 }
 
 .hidden{
@@ -147,10 +171,11 @@ button:disabled{
 
 <body>
 
-<h1>🎮 PS5 Türkçe Çeviri V7</h1>
+<h1>🎮 PS5 Türkçe Çeviri V8</h1>
 
 <div class="subtitle">
-Telefonu PS5 ekranına tut. Altyazı otomatik algılanır ve Türkçeye çevrilir.
+Telefonu PS5 ekranına tut. Beyaz kutu altyazı alanıdır.
+Altyazı otomatik bulunur, okunur ve Türkçeye çevrilir.
 </div>
 
 
@@ -164,7 +189,13 @@ Telefonu PS5 ekranına tut. Altyazı otomatik algılanır ve Türkçeye çevrili
     webkit-playsinline>
   </video>
 
-  <div class="scan-box"></div>
+  <div class="scan-box">
+
+    <div class="scan-label">
+      ALTYAZI ALANI
+    </div>
+
+  </div>
 
 </div>
 
@@ -237,7 +268,7 @@ Telefonu PS5 ekranına tut. Altyazı otomatik algılanır ve Türkçeye çevrili
 
 
   <div class="version">
-    V7 • Altyazı renk algılama + bölge tespiti + çoklu OCR
+    V8 • Gerçek altyazı alanı + renk tespiti + otomatik netleme
   </div>
 
 </div>
@@ -293,6 +324,8 @@ const debugEl =
 
 let stream = null;
 
+let track = null;
+
 let worker = null;
 
 let workerReady = false;
@@ -305,14 +338,12 @@ let lastEnglish = "";
 
 let lastTranslation = "";
 
-let lastSuccessfulText = "";
-
 
 // =====================================================
 // DURUM
 // =====================================================
 
-function status(text){
+function setStatus(text){
 
   statusEl.textContent = text;
 
@@ -327,7 +358,7 @@ async function openCamera(){
 
   try{
 
-    status(
+    setStatus(
       "Kamera açılıyor..."
     );
 
@@ -337,21 +368,8 @@ async function openCamera(){
       stream
         .getTracks()
         .forEach(
-          track =>
-            track.stop()
+          t => t.stop()
         );
-
-    }
-
-
-    if(
-      !navigator.mediaDevices ||
-      !navigator.mediaDevices.getUserMedia
-    ){
-
-      throw new Error(
-        "getUserMedia desteklenmiyor"
-      );
 
     }
 
@@ -386,11 +404,116 @@ async function openCamera(){
         });
 
 
+    track =
+      stream.getVideoTracks()[0];
+
+
     video.srcObject =
       stream;
 
 
     await video.play();
+
+
+    /*
+      Mümkünse sürekli otomatik netleme.
+    */
+
+    try{
+
+      const capabilities =
+        track.getCapabilities
+          ? track.getCapabilities()
+          : {};
+
+
+      if(
+        capabilities.focusMode &&
+        capabilities.focusMode.includes(
+          "continuous"
+        )
+      ){
+
+        await track.applyConstraints({
+
+          advanced:[
+            {
+              focusMode:"continuous"
+            }
+          ]
+
+        });
+
+      }
+
+    }
+
+    catch(error){
+
+      console.log(
+        "Focus constraint desteklenmedi.",
+        error
+      );
+
+    }
+
+
+    /*
+      Mümkünse hafif dijital zoom.
+      Aşırı zoom yapmıyoruz.
+    */
+
+    try{
+
+      const capabilities =
+        track.getCapabilities
+          ? track.getCapabilities()
+          : {};
+
+
+      if(
+        capabilities.zoom
+      ){
+
+        const min =
+          capabilities.zoom.min || 1;
+
+        const max =
+          capabilities.zoom.max || 1;
+
+        if(max > min){
+
+          const target =
+            Math.min(
+              max,
+              min + 0.5
+            );
+
+
+          await track.applyConstraints({
+
+            advanced:[
+              {
+                zoom:target
+              }
+            ]
+
+          });
+
+        }
+
+      }
+
+    }
+
+    catch(error){
+
+      console.log(
+        "Zoom desteklenmedi.",
+        error
+      );
+
+    }
 
 
     cameraBtn.textContent =
@@ -401,8 +524,8 @@ async function openCamera(){
       false;
 
 
-    status(
-      "Kamera hazır."
+    setStatus(
+      "Kamera hazır. Beyaz kutuyu altyazıya denk getir."
     );
 
   }
@@ -410,12 +533,12 @@ async function openCamera(){
   catch(error){
 
     console.error(
-      "KAMERA HATASI:",
+      "KAMERA:",
       error
     );
 
 
-    status(
+    setStatus(
       "Kamera açılamadı."
     );
 
@@ -431,7 +554,7 @@ async function openCamera(){
 
 
 // =====================================================
-// OCR MOTORU
+// OCR WORKER
 // =====================================================
 
 async function initOCR(){
@@ -443,7 +566,7 @@ async function initOCR(){
   }
 
 
-  status(
+  setStatus(
     "OCR motoru hazırlanıyor..."
   );
 
@@ -469,8 +592,8 @@ async function initOCR(){
               "number"
             ){
 
-              status(
-                "OCR çalışıyor %" +
+              setStatus(
+                "Yazı okunuyor %" +
                 Math.round(
                   info.progress * 100
                 )
@@ -514,7 +637,7 @@ async function initOCR(){
     true;
 
 
-  status(
+  setStatus(
     "OCR hazır."
   );
 
@@ -522,10 +645,10 @@ async function initOCR(){
 
 
 // =====================================================
-// HAM KAREYİ AL
+// GERÇEK ALTYAZI ALANINI AL
 // =====================================================
 
-function getFrame(){
+function getSubtitleFrame(){
 
   const w =
     video.videoWidth;
@@ -545,33 +668,42 @@ function getFrame(){
 
 
   /*
-    Altyazı için sadece
-    ekranın alt-orta bölgesine bakıyoruz.
+    EKRANDAKİ BEYAZ KUTU:
 
-    ViewSonic gibi üst/kenar yazıları
-    mümkün olduğunca dışarıda bırakıyoruz.
+    left  = %7
+    right = %7
+
+    top   = %58
+    height= %35
+
+    Buradaki koordinatlar
+    doğrudan kameradan kesiliyor.
   */
 
   const sx =
     Math.floor(
-      w * 0.08
+      w * 0.07
     );
 
   const sy =
     Math.floor(
-      h * 0.62
+      h * 0.58
     );
 
   const sw =
     Math.floor(
-      w * 0.84
+      w * 0.86
     );
 
   const sh =
     Math.floor(
-      h * 0.30
+      h * 0.35
     );
 
+
+  /*
+    İlk aşamada 3x büyütme.
+  */
 
   const scale =
     3;
@@ -591,6 +723,10 @@ function getFrame(){
         willReadFrequently:true
       }
     );
+
+
+  ctx.imageSmoothingEnabled =
+    true;
 
 
   ctx.drawImage(
@@ -616,10 +752,10 @@ function getFrame(){
 
 
 // =====================================================
-// RENK SINIFLANDIRMA
+// RENK TESPİTİ
 // =====================================================
 
-function colorType(r,g,b){
+function detectColor(r,g,b){
 
   const max =
     Math.max(
@@ -635,6 +771,7 @@ function colorType(r,g,b){
       b
     );
 
+
   const saturation =
     max === 0
       ? 0
@@ -642,11 +779,7 @@ function colorType(r,g,b){
 
 
   /*
-    TURUNCU / SARI
-
-    Senin son görüntündeki:
-    "And I--"
-    "I think it actually could work."
+    TURUNCU / ALTIN
   */
 
   if(
@@ -655,9 +788,9 @@ function colorType(r,g,b){
 
     g > 45 &&
 
-    g < r * 0.90 &&
+    g < r * 0.92 &&
 
-    b < g * 0.75 &&
+    b < g * 0.78 &&
 
     saturation > 0.25
 
@@ -670,9 +803,6 @@ function colorType(r,g,b){
 
   /*
     CYAN / MAVİ
-
-    Önceki:
-    "Put it in your lunchbox every day,"
   */
 
   if(
@@ -681,7 +811,7 @@ function colorType(r,g,b){
 
     b > 100 &&
 
-    r < Math.min(g,b) * 0.80 &&
+    r < Math.min(g,b) * 0.82 &&
 
     saturation > 0.20
 
@@ -694,16 +824,13 @@ function colorType(r,g,b){
 
   /*
     BEYAZ
-
-    Renkli altyazı değilse
-    parlak nötr yazıları yakala.
   */
 
   if(
 
-    max > 190 &&
+    max > 185 &&
 
-    saturation < 0.18
+    saturation < 0.20
 
   ){
 
@@ -718,13 +845,14 @@ function colorType(r,g,b){
 
 
 // =====================================================
-// RENKLİ ALTYAZI MASKESİ
+// RENK YOĞUNLUĞU VE SATIR BULMA
 // =====================================================
 
-function createColorMask(type){
+function findSubtitleBand(){
 
   const ctx =
-    getFrame();
+    getSubtitleFrame();
+
 
   if(!ctx){
 
@@ -733,13 +861,20 @@ function createColorMask(type){
   }
 
 
+  const width =
+    canvas.width;
+
+  const height =
+    canvas.height;
+
+
   const image =
     ctx.getImageData(
 
       0,
       0,
-      canvas.width,
-      canvas.height
+      width,
+      height
 
     );
 
@@ -748,40 +883,50 @@ function createColorMask(type){
     image.data;
 
 
-  let minX =
-    canvas.width;
-
-  let minY =
-    canvas.height;
-
-  let maxX =
-    0;
-
-  let maxY =
-    0;
-
-  let count =
-    0;
-
-
   /*
-    Piksel piksel altyazı rengini ara.
+    Her yatay satırda
+    altyazı rengi kaç piksel
+    var hesapla.
   */
+
+  const rows =
+    new Array(
+      height
+    ).fill(0);
+
+
+  const orangeRows =
+    new Array(
+      height
+    ).fill(0);
+
+
+  const cyanRows =
+    new Array(
+      height
+    ).fill(0);
+
+
+  const whiteRows =
+    new Array(
+      height
+    ).fill(0);
+
 
   for(
     let y=0;
-    y<canvas.height;
+    y<height;
     y++
   ){
 
     for(
       let x=0;
-      x<canvas.width;
+      x<width;
       x++
     ){
 
       const i =
-        (y * canvas.width + x) * 4;
+        (y * width + x) * 4;
 
 
       const r =
@@ -794,12 +939,8 @@ function createColorMask(type){
         data[i+2];
 
 
-      let match =
-        false;
-
-
-      const detected =
-        colorType(
+      const type =
+        detectColor(
           r,
           g,
           b
@@ -807,63 +948,37 @@ function createColorMask(type){
 
 
       if(
-        detected === type
+        type !== "none"
       ){
 
-        match =
-          true;
+        rows[y]++;
 
       }
 
 
-      if(match){
+      if(
+        type === "orange"
+      ){
 
-        /*
-          Beyaz/cyan/turuncu
-          pikselleri beyaza çıkar.
-        */
-
-        data[i] =
-          255;
-
-        data[i+1] =
-          255;
-
-        data[i+2] =
-          255;
-
-
-        count++;
-
-
-        if(x < minX){
-          minX = x;
-        }
-
-        if(x > maxX){
-          maxX = x;
-        }
-
-        if(y < minY){
-          minY = y;
-        }
-
-        if(y > maxY){
-          maxY = y;
-        }
+        orangeRows[y]++;
 
       }
 
-      else{
 
-        data[i] =
-          0;
+      if(
+        type === "cyan"
+      ){
 
-        data[i+1] =
-          0;
+        cyanRows[y]++;
 
-        data[i+2] =
-          0;
+      }
+
+
+      if(
+        type === "white"
+      ){
+
+        whiteRows[y]++;
 
       }
 
@@ -873,11 +988,114 @@ function createColorMask(type){
 
 
   /*
-    Hiç yeterli renk bulunmadı.
+    Altyazı satırlarını genellikle
+    orta-alt bölümde arıyoruz.
   */
 
+  const searchStart =
+    Math.floor(
+      height * 0.15
+    );
+
+  const searchEnd =
+    Math.floor(
+      height * 0.95
+    );
+
+
+  let bestY =
+    -1;
+
+  let bestScore =
+    0;
+
+  let bestType =
+    "unknown";
+
+
+  for(
+    let y=searchStart;
+    y<searchEnd;
+    y++
+  ){
+
+    const total =
+      rows[y];
+
+
+    const orange =
+      orangeRows[y];
+
+    const cyan =
+      cyanRows[y];
+
+    const white =
+      whiteRows[y];
+
+
+    /*
+      Renkli altyazı çok daha güvenilir.
+    */
+
+    let score =
+      total;
+
+
+    let type =
+      "white";
+
+
+    if(
+      orange > score * 0.35
+    ){
+
+      score +=
+        orange * 2;
+
+      type =
+        "orange";
+
+    }
+
+
+    if(
+      cyan > score * 0.35
+    ){
+
+      score +=
+        cyan * 2;
+
+      type =
+        "cyan";
+
+    }
+
+
+    /*
+      Çok küçük gürültüyü at.
+    */
+
+    if(
+      score > bestScore &&
+      total > width * 0.002
+    ){
+
+      bestScore =
+        score;
+
+      bestY =
+        y;
+
+      bestType =
+        type;
+
+    }
+
+  }
+
+
   if(
-    count < 80
+    bestY < 0
   ){
 
     return null;
@@ -886,87 +1104,64 @@ function createColorMask(type){
 
 
   /*
-    Renk piksel alanı çok küçükse
-    bu muhtemelen gürültüdür.
+    Bulunan satırın çevresindeki
+    birkaç satırı da dahil et.
+
+    Böylece iki satırlı altyazı
+    desteklenir.
   */
 
-  const boxWidth =
-    maxX-minX+1;
-
-  const boxHeight =
-    maxY-minY+1;
-
-
-  if(
-    boxWidth < 40 ||
-    boxHeight < 8
-  ){
-
-    return null;
-
-  }
-
-
-  /*
-    Kutuyu biraz genişlet.
-    Harflerin kenarlarını kesmeyelim.
-  */
-
-  const padX =
-    Math.floor(
-      canvas.width * 0.025
-    );
-
-  const padY =
-    Math.floor(
-      canvas.height * 0.035
-    );
-
-
-  minX =
+  let top =
     Math.max(
       0,
-      minX-padX
+      bestY -
+      Math.floor(
+        height * 0.10
+      )
     );
 
-  maxX =
+
+  let bottom =
     Math.min(
-      canvas.width-1,
-      maxX+padX
-    );
-
-  minY =
-    Math.max(
-      0,
-      minY-padY
-    );
-
-  maxY =
-    Math.min(
-      canvas.height-1,
-      maxY+padY
+      height-1,
+      bestY +
+      Math.floor(
+        height * 0.16
+      )
     );
 
 
   /*
-    Yeni temiz canvas.
+    Çok fazla alan göndermiyoruz.
   */
 
-  const output =
+  const crop =
     document.createElement(
       "canvas"
     );
 
 
-  output.width =
-    (maxX-minX+1) * 2;
+  const cropWidth =
+    width;
 
-  output.height =
-    (maxY-minY+1) * 2;
+
+  const cropHeight =
+    bottom-top+1;
+
+
+  /*
+    Altyazıyı 4x büyüt.
+  */
+
+  crop.width =
+    cropWidth * 4;
+
+  crop.height =
+    cropHeight * 4;
 
 
   const out =
-    output.getContext(
+    crop.getContext(
       "2d"
     );
 
@@ -979,15 +1174,15 @@ function createColorMask(type){
 
     canvas,
 
-    minX,
-    minY,
-    maxX-minX+1,
-    maxY-minY+1,
+    0,
+    top,
+    cropWidth,
+    cropHeight,
 
     0,
     0,
-    output.width,
-    output.height
+    crop.width,
+    crop.height
 
   );
 
@@ -995,18 +1190,18 @@ function createColorMask(type){
   return {
 
     image:
-      output.toDataURL(
+      crop.toDataURL(
         "image/png"
       ),
 
-    area:
-      count,
+    type:
+      bestType,
 
-    width:
-      boxWidth,
+    y:
+      bestY,
 
-    height:
-      boxHeight
+    score:
+      bestScore
 
   };
 
@@ -1014,13 +1209,14 @@ function createColorMask(type){
 
 
 // =====================================================
-// GRAYSCALE FALLBACK
+// NORMAL FALLBACK
 // =====================================================
 
-function createWhiteFallback(){
+function createFallback(){
 
   const ctx =
-    getFrame();
+    getSubtitleFrame();
+
 
   if(!ctx){
 
@@ -1029,13 +1225,20 @@ function createWhiteFallback(){
   }
 
 
+  const width =
+    canvas.width;
+
+  const height =
+    canvas.height;
+
+
   const image =
     ctx.getImageData(
 
       0,
       0,
-      canvas.width,
-      canvas.height
+      width,
+      height
 
     );
 
@@ -1076,16 +1279,28 @@ function createWhiteFallback(){
       );
 
 
-    /*
-      Nötr beyaz yazı.
-    */
+    const cyan =
+      g > 90 &&
+      b > 100 &&
+      r < Math.min(g,b)*0.85;
+
+
+    const orange =
+      r > 120 &&
+      g > 45 &&
+      g < r*0.92 &&
+      b < g*0.80;
+
+
+    const white =
+      max > 190 &&
+      (max-min) < 45;
+
 
     if(
-
-      max > 175 &&
-
-      (max-min) < 45
-
+      cyan ||
+      orange ||
+      white
     ){
 
       data[i] =
@@ -1129,13 +1344,8 @@ function createWhiteFallback(){
         "image/png"
       ),
 
-    area:0,
-
-    width:
-      canvas.width,
-
-    height:
-      canvas.height
+    type:
+      "fallback"
 
   };
 
@@ -1143,7 +1353,7 @@ function createWhiteFallback(){
 
 
 // =====================================================
-// METİN TEMİZLE
+// OCR TEMİZLEME
 // =====================================================
 
 function cleanText(text){
@@ -1182,7 +1392,7 @@ function cleanText(text){
 
 
 // =====================================================
-// OCR KALİTE PUANI
+// İNGİLİZCE KALİTE
 // =====================================================
 
 function quality(text){
@@ -1223,14 +1433,6 @@ function quality(text){
     ).length;
 
 
-  const symbols =
-    (
-      t.match(
-        /[^A-Za-z0-9\s.,!?'"’‘-]/g
-      ) || []
-    ).length;
-
-
   if(
     letters < 2
   ){
@@ -1241,29 +1443,17 @@ function quality(text){
 
 
   /*
-    "23", "7", "123" gibi sonuçları öldür.
+    "23", "12", "7"
+    gibi çöpleri reddet.
   */
 
   if(
-    numbers > letters
+    numbers >= letters
   ){
 
     return -1000;
 
   }
-
-
-  if(
-    symbols > letters
-  ){
-
-    return -1000;
-
-  }
-
-
-  let score =
-    0;
 
 
   const words =
@@ -1272,16 +1462,15 @@ function quality(text){
       .filter(Boolean);
 
 
-  /*
-    Birden fazla kelime
-    güçlü sinyal.
-  */
+  let score =
+    0;
+
 
   if(
     words.length >= 2
   ){
 
-    score += 20;
+    score += 25;
 
   }
 
@@ -1290,7 +1479,7 @@ function quality(text){
     words.length >= 4
   ){
 
-    score += 10;
+    score += 15;
 
   }
 
@@ -1299,13 +1488,13 @@ function quality(text){
     words.length >= 7
   ){
 
-    score += 5;
+    score += 8;
 
   }
 
 
   /*
-    İngilizce yaygın kelimeler.
+    Yaygın İngilizce kelimeler.
   */
 
   const common = [
@@ -1366,8 +1555,7 @@ function quality(text){
     "how",
     "think",
     "actually",
-    "work",
-    "could"
+    "work"
 
   ];
 
@@ -1376,7 +1564,7 @@ function quality(text){
     t.toLowerCase();
 
 
-  let commonCount =
+  let count =
     0;
 
 
@@ -1393,7 +1581,7 @@ function quality(text){
       ).test(lower)
     ){
 
-      commonCount++;
+      count++;
 
     }
 
@@ -1401,106 +1589,39 @@ function quality(text){
 
 
   score +=
-    commonCount * 13;
+    count * 15;
 
 
   /*
-    Gerçek cümlelerde
-    harf oranı yüksek olur.
-  */
-
-  const total =
-    t.replace(
-      /\s/g,
-      ""
-    ).length;
-
-
-  const ratio =
-    letters /
-    Math.max(
-      1,
-      total
-    );
-
-
-  if(
-    ratio > 0.55
-  ){
-
-    score += 10;
-
-  }
-
-
-  if(
-    ratio > 0.70
-  ){
-
-    score += 5;
-
-  }
-
-
-  /*
-    Çok kısa kelimelerden oluşan
-    saçma OCR'ı cezalandır.
-  */
-
-  let tiny =
-    0;
-
-
-  for(
-    const word of words
-  ){
-
-    if(
-      word.length === 1 &&
-      word !== "a" &&
-      word !== "I"
-    ){
-
-      tiny++;
-
-    }
-
-  }
-
-
-  score -=
-    tiny * 12;
-
-
-  /*
-    TV menüsü / marka ihtimali.
+    TV markası gibi sonuçları
+    ağır şekilde cezalandır.
   */
 
   const forbidden = [
 
     "viewsonic",
     "hdmi",
-    "volume",
-    "input",
+    "monitor",
     "display",
-    "menu",
     "brightness",
     "contrast",
+    "volume",
+    "input",
     "source",
-    "monitor"
+    "menu"
 
   ];
 
 
   for(
-    const bad of forbidden
+    const word of forbidden
   ){
 
     if(
-      lower.includes(bad)
+      lower.includes(word)
     ){
 
-      score -= 100;
+      score -= 150;
 
     }
 
@@ -1545,10 +1666,7 @@ async function recognize(
         "1",
 
       user_defined_dpi:
-        "300",
-
-      tessedit_char_blacklist:
-        "[]{}|~`"
+        "300"
 
     });
 
@@ -1590,7 +1708,7 @@ async function recognize(
   catch(error){
 
     console.error(
-      "OCR:",
+      "OCR ERROR:",
       error
     );
 
@@ -1600,6 +1718,7 @@ async function recognize(
       text:"",
       confidence:0,
       psm,
+
       quality:-1000
 
     };
@@ -1610,7 +1729,7 @@ async function recognize(
 
 
 // =====================================================
-// EN İYİ SONUCU SEÇ
+// SONUÇ SEÇ
 // =====================================================
 
 function chooseBest(results){
@@ -1632,16 +1751,6 @@ function chooseBest(results){
   }
 
 
-  /*
-    Final puan:
-
-    Dil kalitesi
-    +
-    OCR confidence
-    +
-    kelime sayısı
-  */
-
   valid.forEach(
     r => {
 
@@ -1649,7 +1758,7 @@ function chooseBest(results){
 
         r.quality +
 
-        r.confidence * 0.60;
+        r.confidence * 0.65;
 
     }
   );
@@ -1771,7 +1880,7 @@ async function translateText(text){
   catch(error){
 
     console.error(
-      "ÇEVİRİ:",
+      "TRANSLATION:",
       error
     );
 
@@ -1818,31 +1927,33 @@ async function scan(){
 
   try{
 
-    status(
-      "Altyazı rengi aranıyor..."
+    setStatus(
+      "Altyazı bölgesi taranıyor..."
     );
 
 
-    const candidates = [];
-
-
     /*
-      1 — TURUNCU
+      Önce renk tabanlı olarak
+      GERÇEK ALTYAZI SATIRINI bul.
     */
 
-    const orange =
-      createColorMask(
-        "orange"
-      );
+    const band =
+      findSubtitleBand();
 
 
-    if(orange){
+    const images = [];
 
-      candidates.push({
 
-        name:"turuncu",
+    if(band){
 
-        data:orange
+      images.push({
+
+        name:
+          "tespit-" +
+          band.type,
+
+        image:
+          band.image
 
       });
 
@@ -1850,71 +1961,27 @@ async function scan(){
 
 
     /*
-      2 — CYAN
-    */
-
-    const cyan =
-      createColorMask(
-        "cyan"
-      );
-
-
-    if(cyan){
-
-      candidates.push({
-
-        name:"cyan",
-
-        data:cyan
-
-      });
-
-    }
-
-
-    /*
-      3 — BEYAZ
-    */
-
-    const white =
-      createColorMask(
-        "white"
-      );
-
-
-    if(white){
-
-      candidates.push({
-
-        name:"beyaz",
-
-        data:white
-
-      });
-
-    }
-
-
-    /*
-      Eğer renk maskesi bulamadıysa
-      kontrollü beyaz fallback.
+      Renk tespiti başarısızsa
+      fallback kullan.
     */
 
     if(
-      candidates.length === 0
+      images.length === 0
     ){
 
       const fallback =
-        createWhiteFallback();
+        createFallback();
 
 
       if(fallback){
 
-        candidates.push({
+        images.push({
 
-          name:"fallback",
+          name:
+            "fallback",
 
-          data:fallback
+          image:
+            fallback.image
 
         });
 
@@ -1923,22 +1990,31 @@ async function scan(){
     }
 
 
-    /*
-      OCR sonuçları.
-    */
+    if(
+      images.length === 0
+    ){
+
+      setStatus(
+        "Altyazı alanı bulunamadı."
+      );
+
+      return;
+
+    }
+
 
     const results = [];
 
 
     /*
       PSM 6:
-      iki satırlı altyazı için.
+      iki satır.
 
       PSM 7:
-      tek satır için.
+      tek satır.
 
       PSM 11:
-      seyrek metin için.
+      alternatif.
     */
 
     const psms = [
@@ -1949,7 +2025,7 @@ async function scan(){
 
 
     for(
-      const candidate of candidates
+      const item of images
     ){
 
       for(
@@ -1959,7 +2035,7 @@ async function scan(){
         const result =
           await recognize(
 
-            candidate.data.image,
+            item.image,
 
             psm
 
@@ -1967,7 +2043,7 @@ async function scan(){
 
 
         result.mode =
-          candidate.name;
+          item.name;
 
 
         results.push(
@@ -1985,38 +2061,14 @@ async function scan(){
       );
 
 
-    /*
-      Debug bilgisi.
-    */
-
-    if(best){
-
-      debugEl.textContent =
-        "Seçilen: " +
-        best.text +
-        " | " +
-        best.mode +
-        " | PSM " +
-        best.psm;
-
-    }
-
-    else{
-
-      debugEl.textContent =
-        "";
-
-    }
-
-
     if(!best){
 
       confidenceEl.textContent =
         "OCR güveni: -";
 
 
-      status(
-        "Altyazı bulunamadı."
+      setStatus(
+        "Altyazı okunamadı."
       );
 
 
@@ -2025,23 +2077,32 @@ async function scan(){
     }
 
 
+    debugEl.textContent =
+      "Seçilen: " +
+      best.text +
+      " | " +
+      best.mode +
+      " | PSM " +
+      best.psm;
+
+
+    confidenceEl.textContent =
+      "OCR güveni: %" +
+      Math.round(
+        best.confidence
+      );
+
+
     /*
-      Çok düşük güvenli sonuçları
-      ekrana yazma.
+      Güven çok düşükse
+      sonucu çevirmiyoruz.
     */
 
     if(
-      best.confidence < 22
+      best.confidence < 25
     ){
 
-      confidenceEl.textContent =
-        "OCR güveni: %" +
-        Math.round(
-          best.confidence
-        );
-
-
-      status(
+      setStatus(
         "Yazı bulundu fakat net okunamadı."
       );
 
@@ -2051,15 +2112,11 @@ async function scan(){
     }
 
 
-    /*
-      Aşırı düşük kalite.
-    */
-
     if(
       best.quality < 5
     ){
 
-      status(
+      setStatus(
         "OCR sonucu güvenilir değil."
       );
 
@@ -2073,23 +2130,21 @@ async function scan(){
       best.text;
 
 
-    confidenceEl.textContent =
-      "OCR güveni: %" +
-      Math.round(
-        best.confidence
-      );
-
-
     /*
-      Aynı cümleyi tekrar çevirmiyoruz.
+      Aynı yazıysa API'yi
+      tekrar çağırma.
     */
 
     if(
-      best.text ===
-      lastSuccessfulText
+      best.text === lastEnglish &&
+      lastTranslation
     ){
 
-      status(
+      turkishEl.textContent =
+        lastTranslation;
+
+
+      setStatus(
         "Altyazı algılandı."
       );
 
@@ -2099,11 +2154,7 @@ async function scan(){
     }
 
 
-    lastSuccessfulText =
-      best.text;
-
-
-    status(
+    setStatus(
       "Altyazı bulundu. Türkçeye çevriliyor..."
     );
 
@@ -2120,7 +2171,7 @@ async function scan(){
         translated;
 
 
-      status(
+      setStatus(
         "Altyazı başarıyla çevrildi."
       );
 
@@ -2128,7 +2179,7 @@ async function scan(){
 
     else{
 
-      status(
+      setStatus(
         "Altyazı okundu fakat çeviri alınamadı."
       );
 
@@ -2139,12 +2190,12 @@ async function scan(){
   catch(error){
 
     console.error(
-      "TARAMA:",
+      "SCAN ERROR:",
       error
     );
 
 
-    status(
+    setStatus(
       "Tarama sırasında hata oluştu."
     );
 
@@ -2161,14 +2212,14 @@ async function scan(){
 
 
 // =====================================================
-// OTOMATİK ÇEVİR
+// OTOMATİK
 // =====================================================
 
 async function startAutomatic(){
 
   if(!stream){
 
-    status(
+    setStatus(
       "Önce kamerayı aç."
     );
 
@@ -2195,49 +2246,29 @@ async function startAutomatic(){
     false;
 
 
-  status(
+  setStatus(
     "Otomatik çeviri başladı."
   );
 
-
-  /*
-    İlk tarama.
-  */
-
-  await scan();
-
-
-  /*
-    Her yaklaşık 2 saniyede
-    yeni altyazı ara.
-
-    OCR bitmeden ikinci tarama
-    başlamıyor.
-  */
 
   while(
     automatic
   ){
 
+    await scan();
+
+
+    /*
+      OCR bitmeden yeni tarama başlamaz.
+    */
+
     await new Promise(
       resolve =>
         setTimeout(
           resolve,
-          500
+          350
         )
     );
-
-
-    if(
-      !automatic
-    ){
-
-      break;
-
-    }
-
-
-    await scan();
 
   }
 
@@ -2261,7 +2292,7 @@ function stopAutomatic(){
     true;
 
 
-  status(
+  setStatus(
     "Otomatik çeviri durduruldu."
   );
 
@@ -2291,7 +2322,7 @@ stopBtn.addEventListener(
 
 
 // =====================================================
-// SAYFA KAPANINCA
+// SAYFA KAPANIRKEN
 // =====================================================
 
 window.addEventListener(
@@ -2307,8 +2338,8 @@ window.addEventListener(
       stream
         .getTracks()
         .forEach(
-          track =>
-            track.stop()
+          t =>
+            t.stop()
         );
 
     }
@@ -2329,7 +2360,7 @@ window.addEventListener(
 
 
 // =====================================================
-// BAŞLANGIÇ
+// KAMERA DESTEĞİ
 // =====================================================
 
 if(
@@ -2341,7 +2372,7 @@ if(
     true;
 
 
-  status(
+  setStatus(
     "Bu tarayıcı kamera erişimini desteklemiyor."
   );
 
