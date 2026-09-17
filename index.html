@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PS5 Türkçe Çeviri</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+margin:0;
+background:#0d0f12;
+color:white;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+.app{
+max-width:800px;
+margin:auto;
+padding:18px;
+}
+
+h1{
+font-size:25px;
+margin:5px 0;
+}
+
+.desc{
+color:#999;
+margin-bottom:18px;
+}
+
+.camera{
+position:relative;
+width:100%;
+aspect-ratio:16/10;
+background:#000;
+border-radius:18px;
+overflow:hidden;
+}
+
+video{
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+.scan{
+position:absolute;
+left:7%;
+right:7%;
+bottom:8%;
+height:25%;
+border:2px solid white;
+border-radius:10px;
+}
+
+.controls{
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+margin-top:12px;
+}
+
+button{
+border:0;
+border-radius:12px;
+padding:13px 17px;
+font-size:16px;
+font-weight:700;
+background:white;
+color:#111;
+}
+
+button.dark{
+background:#292d33;
+color:white;
+}
+
+.result{
+margin-top:15px;
+background:#1a1d22;
+border-radius:15px;
+padding:17px;
+}
+
+.label{
+font-size:13px;
+color:#999;
+}
+
+.english{
+margin-top:5px;
+font-size:16px;
+}
+
+.turkish{
+margin-top:10px;
+font-size:23px;
+line-height:1.35;
+}
+
+.status{
+margin-top:12px;
+font-size:13px;
+color:#999;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<h1>🎮 PS5 Türkçe Çeviri</h1>
+<div class="desc">
+Kamerayı PS5 ekranındaki altyazıya tut.
+</div>
+
+<div class="camera">
+<video id="video" autoplay playsinline muted></video>
+<div class="scan"></div>
+</div>
+
+<div class="controls">
+<button onclick="startCamera()">📷 Kamerayı Aç</button>
+<button class="dark" onclick="scanSubtitle()">🔎 Altyazıyı Tara</button>
+<button class="dark" onclick="stopCamera()">⏹ Durdur</button>
+</div>
+
+<div class="result">
+
+<div class="label">İNGİLİZCE</div>
+<div class="english" id="english">
+Henüz altyazı okunmadı.
+</div>
+
+<div class="label" style="margin-top:15px">
+TÜRKÇE
+</div>
+
+<div class="turkish" id="turkish">
+Türkçe çeviri burada görünecek.
+</div>
+
+<div class="status" id="status">
+Hazır.
+</div>
+
+</div>
+
+</div>
+
+<canvas id="canvas" style="display:none"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<script>
+
+let stream = null;
+let worker = null;
+let lastText = "";
+
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+
+const english = document.getElementById("english");
+const turkish = document.getElementById("turkish");
+const status = document.getElementById("status");
+
+
+async function startCamera(){
+
+try{
+
+stream = await navigator.mediaDevices.getUserMedia({
+video:{
+facingMode:"environment"
+},
+audio:false
+});
+
+video.srcObject = stream;
+
+status.textContent =
+"Kamera açık. PS5 altyazısını beyaz çerçeveye getir.";
+
+}catch(error){
+
+status.textContent =
+"Kamera açılamadı: " + error.message;
+
+}
+
+}
+
+
+function stopCamera(){
+
+if(stream){
+
+stream.getTracks().forEach(track=>{
+track.stop();
+});
+
+}
+
+stream=null;
+video.srcObject=null;
+
+status.textContent="Kamera durduruldu.";
+
+}
+
+
+async function scanSubtitle(){
+
+if(!video.videoWidth){
+
+status.textContent="Önce kamerayı aç.";
+
+return;
+
+}
+
+status.textContent="Altyazı okunuyor...";
+
+const ctx=canvas.getContext("2d");
+
+const width=video.videoWidth;
+const height=video.videoHeight;
+
+canvas.width=width;
+canvas.height=Math.round(height*0.35);
+
+ctx.drawImage(
+video,
+0,
+height*0.58,
+width,
+height*0.35,
+0,
+0,
+width,
+canvas.height
+);
+
+try{
+
+if(!worker){
+
+status.textContent="OCR hazırlanıyor...";
+
+worker=await Tesseract.createWorker("eng");
+
+}
+
+const result=await worker.recognize(canvas);
+
+let text=result.data.text;
+
+text=text
+.replace(/\s+/g," ")
+.trim();
+
+if(!text){
+
+status.textContent="Altyazı bulunamadı.";
+
+return;
+
+}
+
+english.textContent=text;
+
+if(text.toLowerCase()===lastText.toLowerCase()){
+
+status.textContent="Aynı altyazı.";
+
+return;
+
+}
+
+lastText=text;
+
+status.textContent="Türkçeye çevriliyor...";
+
+const response=await fetch(
+"https://api.mymemory.translated.net/get?q="
++encodeURIComponent(text)
++"&langpair=en|tr"
+);
+
+const data=await response.json();
+
+if(
+data &&
+data.responseData &&
+data.responseData.translatedText
+){
+
+turkish.textContent=
+data.responseData.translatedText;
+
+status.textContent="Çeviri hazır.";
+
+}else{
+
+turkish.textContent=
+"Çeviri alınamadı.";
+
+status.textContent=
+"Çeviri servisi cevap vermedi.";
+
+}
+
+}catch(error){
+
+status.textContent=
+"Hata: "+error.message;
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
