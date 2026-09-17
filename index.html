@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PS5 Türkçe Çeviri V2</title>
+<title>PS5 Türkçe Çeviri V3</title>
 
 <style>
 *{box-sizing:border-box}
@@ -11,7 +11,7 @@
 body{
 margin:0;
 background:#0d0f12;
-color:white;
+color:#fff;
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 
@@ -51,10 +51,11 @@ position:absolute;
 left:5%;
 right:5%;
 bottom:5%;
-height:32%;
+height:25%;
 border:2px solid white;
 border-radius:12px;
-box-shadow:0 0 12px rgba(255,255,255,.5);
+box-shadow:0 0 14px rgba(255,255,255,.6);
+pointer-events:none;
 }
 
 .controls{
@@ -120,7 +121,7 @@ margin-top:8px;
 
 <div class="app">
 
-<h1>🎮 PS5 Türkçe Çeviri</h1>
+<h1>🎮 PS5 Türkçe Çeviri V3</h1>
 
 <div class="desc">
 Telefonu PS5 ekranına tut. Altyazı otomatik algılanır.
@@ -152,9 +153,7 @@ Telefonu PS5 ekranına tut. Altyazı otomatik algılanır.
 
 <div class="result">
 
-<div class="label">
-İNGİLİZCE
-</div>
+<div class="label">İNGİLİZCE</div>
 
 <div class="english" id="english">
 Henüz altyazı okunmadı.
@@ -173,7 +172,7 @@ Hazır.
 </div>
 
 <div class="small">
-Otomatik tarama aktif olduğunda yeni altyazılar kendiliğinden çevrilir.
+V3: Renk algılama + tek satır OCR + otomatik çeviri
 </div>
 
 </div>
@@ -191,7 +190,6 @@ let worker=null;
 let scanning=false;
 let processing=false;
 let lastText="";
-let lastTranslation="";
 
 const video=document.getElementById("video");
 const canvas=document.getElementById("canvas");
@@ -200,6 +198,10 @@ const english=document.getElementById("english");
 const turkish=document.getElementById("turkish");
 const status=document.getElementById("status");
 
+
+/* =========================
+   KAMERA
+========================= */
 
 async function startCamera(){
 
@@ -213,9 +215,11 @@ video:{
 facingMode:{
 ideal:"environment"
 },
+
 width:{
 ideal:1920
 },
+
 height:{
 ideal:1080
 }
@@ -242,7 +246,11 @@ status.textContent=
 }
 
 
-function stopCamera(){
+/* =========================
+   DURDUR
+========================= */
+
+async function stopCamera(){
 
 scanning=false;
 
@@ -255,12 +263,27 @@ track.stop();
 }
 
 stream=null;
+
 video.srcObject=null;
+
+if(worker){
+
+try{
+await worker.terminate();
+}catch(e){}
+
+worker=null;
+
+}
 
 status.textContent="Durduruldu.";
 
 }
 
+
+/* =========================
+   OTOMATİK MOD
+========================= */
 
 async function startAuto(){
 
@@ -306,10 +329,40 @@ processing=false;
 
 }
 
-setTimeout(autoScan,1400);
+setTimeout(autoScan,1800);
 
 }
 
+
+/* =========================
+   OCR HAZIRLA
+========================= */
+
+async function prepareOCR(){
+
+if(worker) return;
+
+status.textContent=
+"OCR hazırlanıyor...";
+
+worker=await Tesseract.createWorker("eng");
+
+await worker.setParameters({
+
+tessedit_pageseg_mode:"7",
+
+preserve_interword_spaces:"1",
+
+user_defined_dpi:"300"
+
+});
+
+}
+
+
+/* =========================
+   ALTYAZI GÖRÜNTÜSÜ
+========================= */
 
 function preprocess(){
 
@@ -318,15 +371,29 @@ const ctx=canvas.getContext("2d");
 const width=video.videoWidth;
 const height=video.videoHeight;
 
+
 /*
-Altyazının bulunduğu alt bölgeyi alıyoruz.
+TV'nin sadece altyazı bölümünü alıyoruz.
+
+Üst taraf:
+%64
+
+Alt taraf:
+%90
 */
 
-const cropY=Math.floor(height*0.68);
-const cropH=Math.floor(height*0.20);
+const cropY=Math.floor(height*0.64);
+const cropH=Math.floor(height*0.26);
 
-canvas.width=width*2;
-canvas.height=cropH*2;
+
+/*
+Çözünürlüğü 3 kat büyüt.
+*/
+
+canvas.width=width*3;
+canvas.height=cropH*3;
+
+ctx.imageSmoothingEnabled=false;
 
 ctx.drawImage(
 video,
@@ -340,8 +407,12 @@ canvas.width,
 canvas.height
 );
 
+
 /*
-Görüntüyü OCR için güçlendir.
+Renk tabanlı altyazı algılama.
+
+PS5 oyunlarında sık görülen
+turkuaz/mavi altyazıyı ayırıyoruz.
 */
 
 const image=ctx.getImageData(
@@ -359,25 +430,56 @@ const r=data[i];
 const g=data[i+1];
 const b=data[i+2];
 
-let gray=
-0.299*r+
-0.587*g+
-0.114*b;
 
 /*
-Kontrast artır.
+Turkuaz/mavi yazı kontrolü.
 */
 
-gray=(gray-128)*1.8+128;
+const cyan =
+g>75 &&
+b>90 &&
+g>r*1.18 &&
+b>r*1.18;
 
-gray=Math.max(
-0,
-Math.min(255,gray)
-);
 
-data[i]=gray;
-data[i+1]=gray;
-data[i+2]=gray;
+/*
+Beyaz yazı kontrolü.
+*/
+
+const white =
+r>165 &&
+g>165 &&
+b>165;
+
+
+/*
+Parlak sarı/beyaz yazıları da yakala.
+*/
+
+const bright =
+r>150 &&
+g>130 &&
+b>90;
+
+
+/*
+Yazıyı beyaz,
+arka planı siyah yap.
+*/
+
+if(cyan || white || bright){
+
+data[i]=255;
+data[i+1]=255;
+data[i+2]=255;
+
+}else{
+
+data[i]=0;
+data[i+1]=0;
+data[i+2]=0;
+
+}
 
 }
 
@@ -386,29 +488,18 @@ ctx.putImageData(image,0,0);
 }
 
 
-async function prepareOCR(){
-
-if(worker) return;
-
-status.textContent=
-"OCR hazırlanıyor...";
-
-worker=await Tesseract.createWorker("eng");
-
-await worker.setParameters({
-
-tessedit_pageseg_mode:"6",
-
-preserve_interword_spaces:"1"
-
-});
-
-}
-
+/* =========================
+   OCR
+========================= */
 
 async function scanSubtitle(){
 
 if(!video.videoWidth) return;
+
+
+/*
+Görüntüyü hazırla.
+*/
 
 preprocess();
 
@@ -417,11 +508,18 @@ await prepareOCR();
 status.textContent=
 "Altyazı okunuyor...";
 
+
 const result=
 await worker.recognize(canvas);
 
+
 let text=
 result.data.text || "";
+
+
+/*
+Temizle.
+*/
 
 text=text
 .replace(/\n+/g," ")
@@ -430,14 +528,19 @@ text=text
 
 
 /*
-OCR'nin saçma sonuçlarını filtrele.
+OCR'dan gelen gereksiz
+karakterleri temizle.
 */
 
-if(!text){
+text=text
+.replace(/[^A-Za-z0-9'.,!?;:\- ]/g," ")
+.replace(/\s+/g," ")
+.trim();
 
-return;
 
-}
+/*
+Çok kısa sonuçları alma.
+*/
 
 if(text.length<3){
 
@@ -447,7 +550,7 @@ return;
 
 
 /*
-Sadece anlamsız karakterlerden oluşuyorsa gönderme.
+En az iki harf olmalı.
 */
 
 const letters=
@@ -461,7 +564,57 @@ return;
 
 
 /*
-Aynı altyazıyı tekrar çevirme.
+Sadece rakam/işaret ise alma.
+*/
+
+if(
+letters<3 &&
+!/[A-Za-z]{3,}/.test(text)
+){
+
+return;
+
+}
+
+
+/*
+OCR'nin tipik saçmalıklarını azalt.
+*/
+
+const garbageWords=[
+"viewsonic",
+"eb",
+"lal",
+"pr",
+"ra",
+"rr",
+"bin",
+"be"
+];
+
+let words=text.split(" ");
+
+text=words
+.filter(word=>{
+
+const lower=word.toLowerCase();
+
+return !garbageWords.includes(lower);
+
+})
+.join(" ")
+.trim();
+
+
+if(text.length<3){
+
+return;
+
+}
+
+
+/*
+Aynı yazıyı tekrar çevirme.
 */
 
 if(
@@ -473,6 +626,7 @@ return;
 
 }
 
+
 lastText=text;
 
 english.textContent=text;
@@ -480,6 +634,10 @@ english.textContent=text;
 status.textContent=
 "Türkçeye çevriliyor...";
 
+
+/* =========================
+   ÇEVİRİ
+========================= */
 
 try{
 
@@ -491,8 +649,10 @@ encodeURIComponent(text)+
 
 );
 
+
 const data=
 await response.json();
+
 
 if(
 data &&
@@ -500,12 +660,11 @@ data.responseData &&
 data.responseData.translatedText
 ){
 
-let translated=
+const translated=
 data.responseData.translatedText.trim();
 
-if(translated){
 
-lastTranslation=translated;
+if(translated){
 
 turkish.textContent=
 translated;
@@ -523,6 +682,8 @@ status.textContent=
 }
 
 }catch(error){
+
+console.log(error);
 
 status.textContent=
 "Çeviri bağlantısı başarısız.";
