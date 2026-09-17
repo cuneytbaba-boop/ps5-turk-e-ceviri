@@ -1,217 +1,445 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PS5 Türkçe Çeviri V3</title>
+
+<meta
+name="viewport"
+content="width=device-width,initial-scale=1"
+>
+
+<title>PS5 Türkçe Çeviri V4</title>
 
 <style>
-*{box-sizing:border-box}
+
+*{
+box-sizing:border-box;
+}
 
 body{
+
 margin:0;
+
 background:#0d0f12;
-color:#fff;
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+
+color:white;
+
+font-family:
+-apple-system,
+BlinkMacSystemFont,
+"Segoe UI",
+sans-serif;
+
 }
 
 .app{
+
 max-width:800px;
+
 margin:auto;
+
 padding:18px;
+
 }
 
 h1{
+
 font-size:25px;
+
 margin:5px 0;
+
 }
 
 .desc{
+
 color:#999;
+
 margin-bottom:18px;
+
 }
 
 .camera{
+
 position:relative;
+
 width:100%;
+
 aspect-ratio:16/10;
+
 background:#000;
+
 border-radius:18px;
+
 overflow:hidden;
+
 }
 
 video{
+
 width:100%;
+
 height:100%;
+
 object-fit:cover;
+
 }
 
 .scan{
+
 position:absolute;
+
 left:5%;
+
 right:5%;
+
 bottom:5%;
+
 height:25%;
+
 border:2px solid white;
+
 border-radius:12px;
-box-shadow:0 0 14px rgba(255,255,255,.6);
+
+box-shadow:
+0 0 14px rgba(255,255,255,.6);
+
 pointer-events:none;
+
 }
 
 .controls{
+
 display:flex;
+
 gap:8px;
+
 flex-wrap:wrap;
+
 margin-top:12px;
+
 }
 
 button{
+
 border:0;
+
 border-radius:12px;
+
 padding:13px 17px;
+
 font-size:16px;
+
 font-weight:700;
+
 background:white;
+
 color:#111;
+
 }
 
 button.dark{
+
 background:#292d33;
+
 color:white;
+
 }
 
 .result{
+
 margin-top:15px;
+
 background:#1a1d22;
+
 border-radius:15px;
+
 padding:17px;
+
 }
 
 .label{
+
 font-size:13px;
+
 color:#999;
+
 }
 
 .english{
+
 margin-top:5px;
+
 font-size:18px;
+
 }
 
 .turkish{
+
 margin-top:10px;
+
 font-size:24px;
+
 line-height:1.35;
+
 }
 
 .status{
+
 margin-top:12px;
+
 font-size:13px;
+
 color:#999;
+
+}
+
+.confidence{
+
+margin-top:6px;
+
+font-size:12px;
+
+color:#777;
+
 }
 
 .small{
+
 font-size:12px;
+
 color:#777;
+
 margin-top:8px;
+
 }
+
 </style>
+
 </head>
+
 
 <body>
 
+
 <div class="app">
 
-<h1>🎮 PS5 Türkçe Çeviri V3</h1>
+
+<h1>
+🎮 PS5 Türkçe Çeviri V4
+</h1>
+
 
 <div class="desc">
-Telefonu PS5 ekranına tut. Altyazı otomatik algılanır.
+
+Telefonu PS5 ekranına tut.
+Altyazı otomatik algılanır ve çevrilir.
+
 </div>
+
 
 <div class="camera">
 
-<video id="video" autoplay playsinline muted></video>
+
+<video
+id="video"
+autoplay
+playsinline
+muted
+></video>
+
 
 <div class="scan"></div>
 
+
 </div>
+
 
 <div class="controls">
 
+
 <button onclick="startCamera()">
+
 📷 Kamerayı Aç
+
 </button>
 
-<button class="dark" onclick="startAuto()">
+
+<button
+class="dark"
+onclick="startAuto()"
+>
+
 ▶️ Otomatik Çeviri
+
 </button>
 
-<button class="dark" onclick="stopCamera()">
+
+<button
+class="dark"
+onclick="stopCamera()"
+>
+
 ⏹ Durdur
+
 </button>
+
 
 </div>
+
 
 <div class="result">
 
-<div class="label">İNGİLİZCE</div>
 
-<div class="english" id="english">
+<div class="label">
+İNGİLİZCE
+</div>
+
+
+<div
+class="english"
+id="english"
+>
+
 Henüz altyazı okunmadı.
+
 </div>
 
-<div class="label" style="margin-top:15px">
+
+<div
+class="label"
+style="margin-top:15px"
+>
+
 TÜRKÇE
+
 </div>
 
-<div class="turkish" id="turkish">
+
+<div
+class="turkish"
+id="turkish"
+>
+
 Türkçe çeviri burada görünecek.
+
 </div>
 
-<div class="status" id="status">
+
+<div
+class="status"
+id="status"
+>
+
 Hazır.
+
 </div>
+
+
+<div
+class="confidence"
+id="confidence"
+>
+
+OCR güveni: -
+
+</div>
+
 
 <div class="small">
-V3: Renk algılama + tek satır OCR + otomatik çeviri
-</div>
+
+V4: Çoklu OCR + renk analizi + sonuç doğrulama
 
 </div>
 
+
 </div>
 
-<canvas id="canvas" style="display:none"></canvas>
+
+</div>
+
+
+<canvas
+id="canvas"
+style="display:none"
+></canvas>
+
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
+
 <script>
 
-let stream=null;
-let worker=null;
-let scanning=false;
-let processing=false;
-let lastText="";
 
-const video=document.getElementById("video");
-const canvas=document.getElementById("canvas");
-
-const english=document.getElementById("english");
-const turkish=document.getElementById("turkish");
-const status=document.getElementById("status");
+/* =========================================
+   DEĞİŞKENLER
+========================================= */
 
 
-/* =========================
+let stream = null;
+
+let worker = null;
+
+let scanning = false;
+
+let processing = false;
+
+let lastText = "";
+
+let lastTranslation = "";
+
+let subtitleHistory = [];
+
+let lastAcceptedTime = 0;
+
+
+const video =
+document.getElementById("video");
+
+
+const canvas =
+document.getElementById("canvas");
+
+
+const english =
+document.getElementById("english");
+
+
+const turkish =
+document.getElementById("turkish");
+
+
+const status =
+document.getElementById("status");
+
+
+const confidence =
+document.getElementById("confidence");
+
+
+
+/* =========================================
    KAMERA
-========================= */
+========================================= */
+
 
 async function startCamera(){
 
 try{
 
-if(stream) return;
+if(stream){
 
-stream=await navigator.mediaDevices.getUserMedia({
+return;
+
+}
+
+
+stream =
+await navigator.mediaDevices.getUserMedia({
 
 video:{
+
 facingMode:{
 ideal:"environment"
 },
@@ -223,67 +451,97 @@ ideal:1920
 height:{
 ideal:1080
 }
+
 },
 
 audio:false
 
 });
 
-video.srcObject=stream;
+
+video.srcObject =
+stream;
+
 
 await video.play();
 
-status.textContent=
+
+status.textContent =
 "Kamera açık. Altyazıyı beyaz çerçeveye getir.";
+
 
 }catch(error){
 
-status.textContent=
-"Kamera açılamadı: "+error.message;
+console.log(error);
+
+
+status.textContent =
+"Kamera açılamadı: "
++
+error.message;
 
 }
 
 }
 
 
-/* =========================
+
+/* =========================================
    DURDUR
-========================= */
+========================================= */
+
 
 async function stopCamera(){
 
 scanning=false;
 
+
 if(stream){
 
-stream.getTracks().forEach(track=>{
+stream
+.getTracks()
+.forEach(track=>{
 track.stop();
 });
 
 }
 
+
 stream=null;
 
+
 video.srcObject=null;
+
 
 if(worker){
 
 try{
+
 await worker.terminate();
+
 }catch(e){}
 
 worker=null;
 
 }
 
-status.textContent="Durduruldu.";
+
+subtitleHistory=[];
+
+lastText="";
+
+
+status.textContent =
+"Durduruldu.";
 
 }
 
 
-/* =========================
+
+/* =========================================
    OTOMATİK MOD
-========================= */
+========================================= */
+
 
 async function startAuto(){
 
@@ -293,27 +551,56 @@ await startCamera();
 
 }
 
-if(!stream) return;
 
-if(scanning) return;
+if(!stream){
+
+return;
+
+}
+
+
+if(scanning){
+
+return;
+
+}
+
 
 scanning=true;
 
-status.textContent=
+
+status.textContent =
 "Otomatik altyazı taraması başladı.";
+
 
 autoScan();
 
 }
 
 
+
+/* =========================================
+   SÜREKLİ TARAMA
+========================================= */
+
+
 async function autoScan(){
 
-if(!scanning) return;
+if(!scanning){
 
-if(!processing && video.videoWidth){
+return;
+
+}
+
+
+if(
+!processing
+&&
+video.videoWidth
+){
 
 processing=true;
+
 
 try{
 
@@ -321,31 +608,49 @@ await scanSubtitle();
 
 }catch(error){
 
-console.log(error);
+console.log(
+"OCR hatası:",
+error
+);
 
 }
+
 
 processing=false;
 
 }
 
-setTimeout(autoScan,1800);
+
+setTimeout(
+autoScan,
+1500
+);
 
 }
 
 
-/* =========================
+
+/* =========================================
    OCR HAZIRLA
-========================= */
+========================================= */
+
 
 async function prepareOCR(){
 
-if(worker) return;
+if(worker){
 
-status.textContent=
+return;
+
+}
+
+
+status.textContent =
 "OCR hazırlanıyor...";
 
-worker=await Tesseract.createWorker("eng");
+
+worker =
+await Tesseract.createWorker("eng");
+
 
 await worker.setParameters({
 
@@ -353,346 +658,867 @@ tessedit_pageseg_mode:"7",
 
 preserve_interword_spaces:"1",
 
-user_defined_dpi:"300"
+user_defined_dpi:"300",
+
+load_system_dawg:"0",
+
+load_freq_dawg:"0"
 
 });
 
 }
 
 
-/* =========================
-   ALTYAZI GÖRÜNTÜSÜ
-========================= */
 
-function preprocess(){
-
-const ctx=canvas.getContext("2d");
-
-const width=video.videoWidth;
-const height=video.videoHeight;
+/* =========================================
+   OCR GÖRÜNTÜSÜ OLUŞTUR
+========================================= */
 
 
-/*
-TV'nin sadece altyazı bölümünü alıyoruz.
+function createVariant(mode){
 
-Üst taraf:
-%64
+const width =
+video.videoWidth;
 
-Alt taraf:
-%90
-*/
-
-const cropY=Math.floor(height*0.64);
-const cropH=Math.floor(height*0.26);
+const height =
+video.videoHeight;
 
 
 /*
-Çözünürlüğü 3 kat büyüt.
+Altyazı bölgesi.
+
+TV görüntüsünün yaklaşık
+%63 - %93 arası.
 */
 
-canvas.width=width*3;
-canvas.height=cropH*3;
 
-ctx.imageSmoothingEnabled=false;
+const cropY =
+Math.floor(height * 0.63);
+
+
+const cropH =
+Math.floor(height * 0.30);
+
+
+/*
+3 kat büyütme.
+*/
+
+
+const c =
+document.createElement("canvas");
+
+
+c.width =
+width * 3;
+
+
+c.height =
+cropH * 3;
+
+
+const ctx =
+c.getContext("2d");
+
+
+ctx.imageSmoothingEnabled=true;
+
 
 ctx.drawImage(
+
 video,
+
 0,
+
 cropY,
+
 width,
+
 cropH,
+
 0,
+
 0,
-canvas.width,
-canvas.height
+
+c.width,
+
+c.height
+
 );
 
 
 /*
-Renk tabanlı altyazı algılama.
-
-PS5 oyunlarında sık görülen
-turkuaz/mavi altyazıyı ayırıyoruz.
+Piksel işlemleri.
 */
 
-const image=ctx.getImageData(
+
+const image =
+ctx.getImageData(
 0,
 0,
-canvas.width,
-canvas.height
+c.width,
+c.height
 );
 
-const data=image.data;
 
-for(let i=0;i<data.length;i+=4){
-
-const r=data[i];
-const g=data[i+1];
-const b=data[i+2];
+const data =
+image.data;
 
 
-/*
-Turkuaz/mavi yazı kontrolü.
-*/
+for(
+let i=0;
+i<data.length;
+i+=4
+){
 
-const cyan =
-g>75 &&
-b>90 &&
-g>r*1.18 &&
-b>r*1.18;
+let r=data[i];
+
+let g=data[i+1];
+
+let b=data[i+2];
 
 
 /*
-Beyaz yazı kontrolü.
+---------------------------------
+V1
+NORMAL GRAYSCALE
+---------------------------------
 */
 
-const white =
-r>165 &&
-g>165 &&
-b>165;
+
+if(mode==="gray"){
+
+let gray =
+0.299*r
++
+0.587*g
++
+0.114*b;
 
 
 /*
-Parlak sarı/beyaz yazıları da yakala.
+Kontrast.
 */
 
-const bright =
-r>150 &&
-g>130 &&
-b>90;
+gray =
+(gray-128)
+*
+1.7
++
+128;
+
+
+gray =
+Math.max(
+0,
+Math.min(
+255,
+gray
+)
+);
+
+
+data[i]=gray;
+
+data[i+1]=gray;
+
+data[i+2]=gray;
+
+}
 
 
 /*
-Yazıyı beyaz,
-arka planı siyah yap.
+---------------------------------
+V2
+TURKUAZ / MAVİ
+---------------------------------
 */
 
-if(cyan || white || bright){
+
+if(mode==="cyan"){
+
+/*
+Turkuaz yazıda
+G ve B genellikle
+R'den daha yüksek.
+*/
+
+
+let cyanStrength =
+(
+g+b
+-
+2*r
+);
+
+
+/*
+Daha geniş tolerans.
+*/
+
+
+if(cyanStrength>35){
+
+/*
+Parlak yazı.
+*/
 
 data[i]=255;
+
 data[i+1]=255;
+
 data[i+2]=255;
 
 }else{
 
+/*
+Koyu arka plan.
+*/
+
 data[i]=0;
+
 data[i+1]=0;
+
 data[i+2]=0;
 
 }
 
 }
 
-ctx.putImageData(image,0,0);
+
+/*
+---------------------------------
+V3
+PARLAKLIK
+---------------------------------
+*/
+
+
+if(mode==="bright"){
+
+let brightness =
+Math.max(r,g,b);
+
+
+/*
+Yazı kenarlarını
+yakalamak için
+geniş eşik.
+*/
+
+
+if(brightness>145){
+
+data[i]=255;
+
+data[i+1]=255;
+
+data[i+2]=255;
+
+}else{
+
+data[i]=0;
+
+data[i+1]=0;
+
+data[i+2]=0;
+
+}
+
+}
 
 }
 
 
-/* =========================
-   OCR
-========================= */
-
-async function scanSubtitle(){
-
-if(!video.videoWidth) return;
+ctx.putImageData(
+image,
+0,
+0
+);
 
 
-/*
-Görüntüyü hazırla.
-*/
+return c;
 
-preprocess();
-
-await prepareOCR();
-
-status.textContent=
-"Altyazı okunuyor...";
+}
 
 
-const result=
-await worker.recognize(canvas);
+
+/* =========================================
+   METİN TEMİZLEME
+========================================= */
 
 
-let text=
-result.data.text || "";
+function cleanOCRText(text){
+
+if(!text){
+
+return "";
+
+}
 
 
 /*
-Temizle.
+Satırları birleştir.
 */
 
-text=text
+text =
+text
 .replace(/\n+/g," ")
 .replace(/\s+/g," ")
 .trim();
 
 
 /*
-OCR'dan gelen gereksiz
-karakterleri temizle.
+OCR'nin ürettiği
+bazı özel karakterleri
+temizle.
 */
 
-text=text
-.replace(/[^A-Za-z0-9'.,!?;:\- ]/g," ")
+
+text =
+text.replace(
+/[^A-Za-z0-9'.,!?;:\- ]/g,
+" "
+);
+
+
+text =
+text
 .replace(/\s+/g," ")
 .trim();
 
 
-/*
-Çok kısa sonuçları alma.
-*/
+return text;
 
-if(text.length<3){
+}
 
-return;
+
+
+/* =========================================
+   METİN KALİTE KONTROLÜ
+========================================= */
+
+
+function isGoodEnglish(text, conf){
+
+if(!text){
+
+return false;
+
+}
+
+
+if(text.length<4){
+
+return false;
 
 }
 
 
 /*
-En az iki harf olmalı.
+Harf sayısı.
 */
 
-const letters=
-(text.match(/[A-Za-z]/g)||[]).length;
+const letters =
+(
+text.match(/[A-Za-z]/g)
+||
+[]
+).length;
 
-if(letters<2){
 
-return;
+/*
+Çok az harf varsa
+saçmadır.
+*/
+
+if(letters<3){
+
+return false;
 
 }
 
 
 /*
-Sadece rakam/işaret ise alma.
+Tek karakterlik kelimeleri
+fazla kabul etme.
 */
 
-if(
-letters<3 &&
-!/[A-Za-z]{3,}/.test(text)
-){
-
-return;
-
-}
+const words =
+text.split(" ");
 
 
-/*
-OCR'nin tipik saçmalıklarını azalt.
-*/
-
-const garbageWords=[
-"viewsonic",
-"eb",
-"lal",
-"pr",
-"ra",
-"rr",
-"bin",
-"be"
-];
-
-let words=text.split(" ");
-
-text=words
-.filter(word=>{
-
-const lower=word.toLowerCase();
-
-return !garbageWords.includes(lower);
-
-})
-.join(" ")
-.trim();
-
-
-if(text.length<3){
-
-return;
-
-}
-
-
-/*
-Aynı yazıyı tekrar çevirme.
-*/
-
-if(
-text.toLowerCase()===
-lastText.toLowerCase()
-){
-
-return;
-
-}
-
-
-lastText=text;
-
-english.textContent=text;
-
-status.textContent=
-"Türkçeye çevriliyor...";
-
-
-/* =========================
-   ÇEVİRİ
-========================= */
-
-try{
-
-const response=await fetch(
-
-"https://api.mymemory.translated.net/get?q="+
-encodeURIComponent(text)+
-"&langpair=en|tr"
-
+const meaningfulWords =
+words.filter(
+word =>
+/[A-Za-z]{2,}/.test(word)
 );
 
 
-const data=
-await response.json();
-
+/*
+En az bir gerçek kelime.
+*/
 
 if(
-data &&
-data.responseData &&
-data.responseData.translatedText
+meaningfulWords.length<1
 ){
 
-const translated=
-data.responseData.translatedText.trim();
-
-
-if(translated){
-
-turkish.textContent=
-translated;
-
-status.textContent=
-"Otomatik çeviri hazır.";
+return false;
 
 }
 
-}else{
 
-status.textContent=
-"Çeviri alınamadı.";
+/*
+Tekrar eden anlamsız
+karakter kontrolü.
+*/
+
+if(
+/(.)\1\1/.test(text)
+){
+
+return false;
+
+}
+
+
+/*
+OCR güveni düşükse
+hemen kabul etme.
+*/
+
+if(
+typeof conf==="number"
+&&
+conf<25
+){
+
+return false;
+
+}
+
+
+return true;
+
+}
+
+
+
+/* =========================================
+   ADAYLARI KARŞILAŞTIR
+========================================= */
+
+
+function normalizeForCompare(text){
+
+return text
+.toLowerCase()
+.replace(/[^a-z0-9]+/g," ")
+.trim();
+
+}
+
+
+
+/* =========================================
+   EN İYİ OCR SONUCUNU BUL
+========================================= */
+
+
+async function recognizeVariants(){
+
+const variants = [
+
+{
+name:"normal",
+canvas:createVariant("gray")
+},
+
+{
+name:"turkuaz",
+canvas:createVariant("cyan")
+},
+
+{
+name:"parlak",
+canvas:createVariant("bright")
+}
+
+];
+
+
+let results=[];
+
+
+for(
+const variant
+of variants
+){
+
+try{
+
+const result =
+await worker.recognize(
+variant.canvas
+);
+
+
+let text =
+cleanOCRText(
+result.data.text
+);
+
+
+let conf =
+Number(
+result.data.confidence
+);
+
+
+if(
+isGoodEnglish(
+text,
+conf
+)
+){
+
+results.push({
+
+text:text,
+
+confidence:conf,
+
+mode:variant.name
+
+});
 
 }
 
 }catch(error){
 
-console.log(error);
+console.log(
+variant.name,
+error
+);
 
-status.textContent=
-"Çeviri bağlantısı başarısız.";
+}
+
+}
+
+
+/*
+Sonuç yoksa.
+*/
+
+if(results.length===0){
+
+return null;
+
+}
+
+
+/*
+Güven puanına göre
+sırala.
+*/
+
+results.sort(
+(a,b)=>
+b.confidence-a.confidence
+);
+
+
+/*
+En yüksek güven.
+*/
+
+return results[0];
+
+}
+
+
+
+/* =========================================
+   AYNI ALTYAZIYI DOĞRULA
+========================================= */
+
+
+function acceptCandidate(candidate){
+
+if(!candidate){
+
+return null;
+
+}
+
+
+const normalized =
+normalizeForCompare(
+candidate.text
+);
+
+
+/*
+Son 5 sonucu tut.
+*/
+
+subtitleHistory.push({
+
+text:candidate.text,
+
+normalized:normalized,
+
+confidence:candidate.confidence,
+
+time:Date.now()
+
+});
+
+
+if(
+subtitleHistory.length>5
+){
+
+subtitleHistory.shift();
+
+}
+
+
+/*
+Aynı/çok benzer metin
+kaç kere görüldü?
+*/
+
+
+const similar =
+subtitleHistory.filter(
+item =>
+item.normalized===normalized
+);
+
+
+if(
+similar.length>=2
+){
+
+return candidate;
+
+}
+
+
+/*
+Güven çok yüksekse
+tek seferde de kabul.
+*/
+
+if(
+candidate.confidence>=75
+){
+
+return candidate;
+
+}
+
+
+return null;
+
+}
+
+
+
+/* =========================================
+   ÇEVİRİ
+========================================= */
+
+
+async function translateText(text){
+
+try{
+
+const url =
+"https://api.mymemory.translated.net/get?q="
++
+encodeURIComponent(text)
++
+"&langpair=en|tr";
+
+
+const response =
+await fetch(url);
+
+
+if(!response.ok){
+
+return null;
+
+}
+
+
+const data =
+await response.json();
+
+
+if(
+data
+&&
+data.responseData
+&&
+data.responseData.translatedText
+){
+
+return data
+.responseData
+.translatedText
+.trim();
+
+}
+
+
+return null;
+
+
+}catch(error){
+
+console.log(
+"Çeviri hatası:",
+error
+);
+
+return null;
+
+}
+
+
+
+/* =========================================
+   ANA OCR
+========================================= */
+
+
+async function scanSubtitle(){
+
+if(
+!video.videoWidth
+){
+
+return;
+
+}
+
+
+await prepareOCR();
+
+
+status.textContent =
+"Altyazı analiz ediliyor...";
+
+
+const candidate =
+await recognizeVariants();
+
+
+if(!candidate){
+
+return;
+
+}
+
+
+/*
+Aday sonucu doğrula.
+*/
+
+
+const accepted =
+acceptCandidate(
+candidate
+);
+
+
+if(!accepted){
+
+status.textContent =
+"Altyazı doğrulanıyor...";
+
+return;
+
+}
+
+
+/*
+Aynı yazıysa
+yeniden çevirme.
+*/
+
+
+if(
+normalizeForCompare(
+accepted.text
+)
+===
+normalizeForCompare(
+lastText
+)
+){
+
+return;
+
+}
+
+
+lastText =
+accepted.text;
+
+
+english.textContent =
+accepted.text;
+
+
+confidence.textContent =
+"OCR güveni: "
++
+Math.round(
+accepted.confidence
+)
++
+"%";
+
+
+status.textContent =
+"Türkçeye çevriliyor...";
+
+
+const translated =
+await translateText(
+accepted.text
+);
+
+
+if(translated){
+
+lastTranslation =
+translated;
+
+
+turkish.textContent =
+translated;
+
+
+status.textContent =
+"Otomatik çeviri hazır.";
+
+}else{
+
+status.textContent =
+"Çeviri alınamadı.";
 
 }
 
 }
+
 
 </script>
 
 </body>
+
 </html>
